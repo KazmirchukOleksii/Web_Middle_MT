@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Прогноз Погоди</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: #ffffff;
+      transition: background 0.5s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      text-align: center;
+    }
+    .weather-container {
+      background: rgba(0,0,0,0.4);
+      padding: 20px;
+      border-radius: 12px;
+      backdrop-filter: blur(6px);
+      width: 90%;
+      max-width: 400px;
+    }
+    select, input, button {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 4px;
+      border: none;
+      outline: none;
+    }
+    .error {
+      color: #ffdddd;
+      margin-top: 10px;
+    }
+    .forecast {
+      margin-top: 15px;
+    }
+    .forecast-day {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="weather-container">
+    <h1>Прогноз Погоди</h1>
+    <div>
+      <select id="presetLocations">
+        <option value="Kyiv">Київ</option>
+        <option value="Lviv">Львів</option>
+        <option value="Odesa">Одеса</option>
+        <option value="Kharkiv">Харків</option>
+      </select>
+      <input type="text" id="customLocation" placeholder="Введіть місто..." />
+      <button id="getWeather">Отримати</button>
+    </div>
+    <div id="weatherResult"></div>
+    <div id="errorMsg" class="error"></div>
+  </div>
+
+  <script>
+    const apiKey = '7c9baac27c1d484fab1180638250905';
+    const maxDays = 100;
+
+    document.getElementById('getWeather').addEventListener('click', () => {
+      const preset = document.getElementById('presetLocations').value;
+      const custom = document.getElementById('customLocation').value.trim();
+      const location = custom || preset;
+      fetchWeather(location);
+    });
+
+    async function fetchWeather(loc) {
+      const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${encodeURIComponent(loc)}&days=${maxDays}&lang=uk`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        displayWeather(data);
+      } catch (err) {
+        document.getElementById('weatherResult').innerHTML = '';
+        document.getElementById('errorMsg').textContent = err.message;
+        setBackground('error');
+      }
+    }
+
+    function displayWeather(data) {
+      document.getElementById('errorMsg').textContent = '';
+      const { location, current, forecast } = data;
+      const resultEl = document.getElementById('weatherResult');
+      const html = `
+        <h2>${location.name}, ${location.country}</h2>
+        <p>Температура: ${current.temp_c}&deg;C</p>
+        <p>Хмарність: ${current.cloud}%</p>
+        <p>Вітер: ${current.wind_kph} км/год</p>
+        <div class="forecast">
+          <h3>Прогноз на ${forecast.forecastday.length} дні</h3>
+          ${forecast.forecastday.map(day => `
+            <div class="forecast-day">
+              <span>${day.date}</span>
+              <span>${day.day.maxtemp_c}&deg;C / ${day.day.mintemp_c}&deg;C</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      resultEl.innerHTML = html;
+      setBackground(current.condition.text.toLowerCase());
+    }
+
+    function setBackground(condition) {
+      let bg = '';
+      if (condition.includes('sunny') || condition.includes('ясно')) bg = 'linear-gradient(to right, #fceabb, #f8b500)';
+      else if (condition.includes('cloud') || condition.includes('хмар')) bg = 'linear-gradient(to right, #bdc3c7, #2c3e50)';
+      else if (condition.includes('rain') || condition.includes('дощ')) bg = 'linear-gradient(to right, #4e54c8, #8f94fb)';
+      else bg = 'linear-gradient(to right, #89f7fe, #66a6ff)';
+      document.body.style.background = bg;
+    }
+  </script>
+</body>
+</html>
